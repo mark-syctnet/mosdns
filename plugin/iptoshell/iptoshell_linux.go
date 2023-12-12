@@ -22,101 +22,96 @@
 package iptoshell
 
 import (
-	"context"
-	"fmt"
-	"github.com/IrineSistiana/mosdns/v5/coremain"
-	"github.com/IrineSistiana/mosdns/v5/pkg/executable_seq"
-	"github.com/IrineSistiana/mosdns/v5/pkg/query_context"
-	"github.com/miekg/dns"
-	"go.uber.org/zap"
-	"net/netip"
-	"os/exec"
-	"strconv"
+        "context"
+        "fmt"
+        "github.com/IrineSistiana/mosdns/v5/pkg/query_context"
+        "github.com/miekg/dns"
+        "github.com/nadoo/ipset"
+        "net/netip"
+        "os/exec"
+        "strconv"
 )
 
-var _ coremain.ExecutablePlugin = (*iptoshellPlugin)(nil)
-
 type iptoshellPlugin struct {
-	*coremain.BP
-	args *Args
+        args *Args
+        nl   *ipset.NetLink
 }
 
-func newiptoshellPlugin(bp *coremain.BP, args *Args) (*iptoshellPlugin, error) {
-	if args.Mask4 == 0 {
-		args.Mask4 = 24
-	}
-	if args.Mask6 == 0 {
-		args.Mask6 = 32
-	}
+func newIpToshellPlugin(args *Args) (*iptoshellPlugin, error) {
+        if args.Mask4 == 0 {
+                args.Mask4 = 24
+        }
+        if args.Mask6 == 0 {
+                args.Mask6 = 32
+        }
 
-
-	return &iptoshellPlugin{
-		BP:   bp,
-		args: args,
-	}, nil
+        return &iptoshellPlugin{
+                args: args,
+                nl:   nl,
+        }, nil
 }
 
-func (p *iptoshellPlugin) Exec(ctx context.Context, qCtx *query_context.Context, next executable_seq.ExecutableChainNode) error {
-	r := qCtx.R()
-	if r != nil {
-		er := p.addIPtoshell(r)
-		if er != nil {
-			p.L().Warn("failed to add response IP to shell", qCtx.InfoField(), zap.Error(er))
-		}
-	}
-
-	return executable_seq.ExecChainNode(ctx, qCtx, next)
+func (p *iptoshellPlugin) Exec(_ context.Context, qCtx *query_context.Context) error {
+        r := qCtx.R()
+        if r != nil {
+                if err := p.addIPtoshell(r); err != nil {
+                        return fmt.Errorf("iptoshell: %w", err)
+                }
+        }
+        return nil
 }
 
+func (p *iptoshellPlugin) Close() error {
+        return p.nl.Close()
+}
 
 func (p *iptoshellPlugin) addIPtoshell(r *dns.Msg) error {
-	for i := range r.Answer {
-		switch rr := r.Answer[i].(type) {
-		case *dns.A:
-			if len(p.args.SetName4) == 0 {
-				continue
-			}
-			addr, ok := netip.AddrFromSlice(rr.A.To4())
-			if !ok {
-				return fmt.Errorf("iptoshell invalid A record with ip: %s", rr.A)
-			}
-			var okprefix error
-			prefix, okprefix := addr.Prefix(p.args.Mask4)
-			if okprefix != nil {
-				return fmt.Errorf("iptoshell to Prefix  invalid A record with ip: %s", rr.A)
-			}
-			cmd := exec.Command(p.args.SetName4, rr.A.String(), strconv.Itoa(p.args.Mask4), prefix.String() )
+        for i := range r.Answer {
+                switch rr := r.Answer[i].(type) {
+                case *dns.A:
+                        if len(p.args.SetName4) == 0 {
+                                continue
+                        }
+                        addr, ok := netip.AddrFromSlice(rr.A.To4())
+                        if !ok {
+                                return fmt.Errorf("iptoshell invalid A record with ip: %s", rr.A)
+                        }
+                        var okprefix error
+                        prefix, okprefix := addr.Prefix(p.args.Mask4)
+                        if okprefix != nil {
+                                return fmt.Errorf("iptoshell to Prefix  invalid A record with ip: %s", rr.A)
+                        }
+                        args := strings.Fields(p.args.SetName4)
+                        cmd := exec.Command(args[0], args[1:]..., rr.A.String(), strconv.Itoa(p.args.Mask4), prefix.String() )
                         err := cmd.Run()
-			if err != nil {
-			      return fmt.Errorf(" RUN iptoshell invalid  A record with ip: %s", rr.A)
-			}    
-			
-			
+                        if err != nil {
+                              return fmt.Errorf(" RUN iptoshell invalid  A record with ip: %s", rr.A)
+                        } 
 
-		case *dns.AAAA:
-			if len(p.args.SetName6) == 0 {
-				continue
-			}
-			addr, ok := netip.AddrFromSlice(rr.AAAA.To16())
-			if !ok {
-				return fmt.Errorf("invalid AAAA record with ip: %s", rr.AAAA)
-			}
-			var okprefix error
-			prefix, okprefix := addr.Prefix(p.args.Mask6)
-			if okprefix != nil {
-				return fmt.Errorf("iptoshell to Prefix  invalid AAAA record with ip: %s", rr.AAAA)
-			}
-			cmd := exec.Command(p.args.SetName6, rr.AAAA.String(),  strconv.Itoa(p.args.Mask6), prefix.String())
+
+                case *dns.AAAA:
+                        if len(p.args.SetName6) == 0 {
+                                continue
+                        }
+                        addr, ok := netip.AddrFromSlice(rr.AAAA.To16())
+                        if !ok {
+                                return fmt.Errorf("iptoshell invalid AAAA record with ip: %s", rr.AAAA)
+                        }
+                        var okprefix error
+                        prefix, okprefix := addr.Prefix(p.args.Mask6)
+                        if okprefix != nil {
+                                return fmt.Errorf("iptoshell to Prefix  invalid AAAA record with ip: %s", rr.AAAA)
+                        }
+                        args := strings.Fields(p.args.SetName6)
+                        cmd := exec.Command(args[0], args[1:]..., rr.AAAA.String(), strconv.Itoa(p.args.Mask6), prefix.String())
                         err := cmd.Run()
-			if err != nil {
-			     return fmt.Errorf("Run iptoshell AAAA record with ip: %s", rr.AAAA)
-			} 
-			
-			
-		default:
-			continue
-		}
-	}
+                        if err != nil {
+                             return fmt.Errorf("Run iptoshell AAAA record with ip: %s", rr.AAAA)
+                        } 
+                default:
+                        continue
+                }
+        }
 
-	return nil
+        return nil
 }
