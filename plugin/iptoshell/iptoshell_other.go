@@ -22,20 +22,16 @@
 package iptoshell
 
 import (
-	"context"
-	"github.com/IrineSistiana/mosdns/v4/coremain"
-	"github.com/IrineSistiana/mosdns/v4/pkg/executable_seq"
-	"github.com/IrineSistiana/mosdns/v4/pkg/query_context"
+        "context"
+        "github.com/IrineSistiana/mosdns/v5/pkg/query_context"
 )
 
-type iptoshellPlugin struct {
-	*coremain.BP
+type iptoshellPlugin struct{}
+
+func newIpToshellPlugin(_ *Args) (*iptoshellPlugin, error) {
+        return &iptoshellPlugin{}, nil
 }
 
-func newiptoshellPlugin(bp *coremain.BP, args *Args) (*ipsetPlugin, error) {
-	return &iptoshellPlugin{BP: bp}, nil
-}
-
-func (p *iptoshellPlugin) Exec(ctx context.Context, qCtx *query_context.Context, next executable_seq.ExecutableChainNode) error {
-	return executable_seq.ExecChainNode(ctx, qCtx, next)
+func (p *iptoshellPlugin) Exec(_ context.Context, _ *query_context.Context) error {
+        return nil
 }
