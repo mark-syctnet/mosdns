@@ -20,7 +20,7 @@
 package iptoshell
 
 import (
-	"github.com/IrineSistiana/mosdns/v4/coremain"
+	"github.com/IrineSistiana/mosdns/v5/coremain"
 )
 
 const PluginType = "iptoshell"
