@@ -44,10 +44,13 @@ func newIpToshellPlugin(args *Args) (*iptoshellPlugin, error) {
         if args.Mask6 == 0 {
                 args.Mask6 = 32
         }
-
+        nl, err := ipset.Init()
+	if err != nil {
+		return nil, err
+	}
         return &iptoshellPlugin{
                 args: args,
-                nl:   nl,
+		nl:   nl,
         }, nil
 }
 
