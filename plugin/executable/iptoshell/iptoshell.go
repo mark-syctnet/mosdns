@@ -69,11 +69,11 @@ func QuickSetup(_ sequence.BQ, s string) (any, error) {
                 case "inet":
                         args.Mask4 = m
                         args.SetName4 = ss[0]
-                        args.Tagnum = tagnum
+                        args.Tagnum = int32(tagnum)
                 case "inet6":
                         args.Mask6 = m
                         args.SetName6 = ss[0]
-                        args.Tagnum = tagnum
+                        args.Tagnum = int32(tagnum)
                 default:
                         return nil, fmt.Errorf("iptoshell invalid set family, %s", ss[0])
                 }
