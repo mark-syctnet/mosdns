@@ -37,7 +37,7 @@ type Args struct {
         SetName6 string `yaml:"set_bash_name6"`
         Mask4    int    `yaml:"mask4"` // default 24
         Mask6    int    `yaml:"mask6"` // default 32
-        Tagnum   int32    `yaml:"tagnum"` // default 0 
+        Tagnum   int64    `yaml:"tagnum"` // default 0 
 }
 
 var _ sequence.Executable = (*iptoshellPlugin)(nil)
@@ -69,11 +69,11 @@ func QuickSetup(_ sequence.BQ, s string) (any, error) {
                 case "inet":
                         args.Mask4 = m
                         args.SetName4 = ss[0]
-                        args.Tagnum = int32(tagnum)
+                        args.Tagnum = int64(tagnum)
                 case "inet6":
                         args.Mask6 = m
                         args.SetName6 = ss[0]
-                        args.Tagnum = int32(tagnum)
+                        args.Tagnum = int64(tagnum)
                 default:
                         return nil, fmt.Errorf("iptoshell invalid set family, %s", ss[0])
                 }
